@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>粒子效果</title>
+  <style type="text/css">
+    body {
+      background: rgb(12, 19, 40);
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="c" width="600" height="800"></canvas>
+  <script type="text/javascript">
+    (function () {
+      //获取canvas元素
+      var canvas = document.getElementById("c");
+      var ctx = null; //渲染上下文
+      if (canvas.getContext) {
+        //获取canvas画布的上下文
+        ctx = canvas.getContext("2d");
+      }
+      canvas.ctx = ctx;
+      canvas.w = 600;
+      canvas.h = 800;
+      //新建一个image对象
+      var image = new Image();
+      // image.src="D:/desk/java/hw/webtest/235x235.png"
+      image.src = "./235x235.png"
+      image.xOffset = 100;
+      image.yOffset = 100;
+      image.w = 235;
+      image.h = 235;
+      console.log(image.x)
+      var particles = [];
+      var imageData = []
+      image.onload = function () {
+        var st = new Date()
+        //把加载完的图像会知道画布上
+        ctx.drawImage(image, 100, 100);
+        console.log('==============image onload==============')
+        var et = new Date()
+        console.log("drawTime = " + (et - st))
+        // getTrgb(125,125,1,1);
+        imageData = ctx.getImageData(100, 100, 235, 235);
+        image.imageData = imageData;
+        image.imageData.length = imageData.data.length;
+        calculate();
+        console.log(particles[1]);
+        draw()
+      };
+      //计算并保存坐标
+      // function calculate(){
+      //   var len = image.imageData.length;
+      //   //只保存100行，100列的像素值、
+      //   var cols = 235,
+      //       rows = 235;
+      //   //设成100行，100列后每个单元的高度
+      //   var s_width = parseInt(image.w/cols),
+      //       s_height = parseInt(image.h/rows);
+      //   var pos = 0;//数组中的位置
+      //   var par_x, par_y; //粒子的x，y坐标
+      //   var data = image.imageData.data; // 像素值数组
+      //   //i,j从1开始
+      //   for(var i = 1; i <= cols;i++){
+      //     for(var j = 1; j <= rows; j++){
+      //       //计算(i,j)在数组中的R的坐标值
+      //       pos = [(j*s_height - 1)*image.w + (i*s_width - 1)]*4;
+      //       //判断R值是否符合要求
+      //       if(data[pos] != 0){
+      //         var color = `rgb(${data[pos]},${data[pos+1]},${data[pos+2]})`;
+      //         var particle = {
+      //           // 偏移，x,y值都随机一下
+      //           x: image.xOffset + i*s_width + (Math.random() - 0.5)*20,
+      //           y: image.yOffset + j*s_height + (Math.random() - 0.5)*20,
+      //           fillStyle: color
+      //         }
+      //         //符合要求的粒子保存到数组里
+      //         particles.push(particle);
+      //       }
+      //     }
+      //   }
+      //     console.log(particles.length)
+      // }
+      // //绘图案
+      // function draw(){
+      //   //清空画布
+      //   canvas.ctx.clearRect(0,0,canvas.w,canvas.h);
+      //
+      //   var len = particles.length,
+      //       cur_particle = null;
+      //
+      //   //把保存的粒子全部绘制到画布里
+      //   for(var i = 0;i < len;i++){
+      //     //当前粒子
+      //     cur_particle = particles[i];
+      //     //设置填充颜色
+      //     canvas.ctx.fillStyle = cur_particle.fillStyle;
+      //     //绘制粒子到画布上
+      //     canvas.ctx.fillRect(cur_particle.x,cur_particle.y,1,1);
+      //   }
+      //   console.log(particles[1])
+      // }
+
+
+      //算法
+      Math.easeInOutExpo = function (t, b, c, d) {
+        t /= d / 2;
+        if (t < 1) return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
+        t--;
+        // console.log('down');
+
+        return c / 2 * (-Math.pow(2, -10 * t) + 2) + b;
+
+
+      }
+      Math.easeInOutExpo1 = function (t, b, c, d) {
+        //t=0,b=0,c=250,d=2000, x0=0,x1=250,cur_x=?
+        t = 2 * t / d
+        if (t < 1) {
+          return c / 2 * t * t + b//2的10*(t-1)+b 次方冪
+        }
+        t--;
+        console.log('down1');
+        return -c / 2 * ((--t) * (t - 2) - 1) + b;
+      }
+      console.log(0, Math.easeInOutExpo(0, 0, 103, 2000))
+      console.log(1, Math.easeInOutExpo1(0, 0, 103, 2000))
+
+      //计算并保存坐标
+      function calculate() {
+        var len = image.imageData.length;
+        //只保存100行，100列的像素值、有多少個點
+        var cols = 235,
+          rows = 235;
+        //设成100行，100列后每个单元的高度
+        var s_width = parseInt(image.w / cols),
+          s_height = parseInt(image.h / rows);
+
+        var pos = 0;//数组中的位置
+        var par_x, par_y; //粒子的x，y坐标
+        var data = image.imageData.data; // 像素值数组
+        //i,j从1开始
+        for (var i = 1; i <= cols; i++) {
+          for (var j = 1; j <= rows; j++) {
+            //计算(i,j)在数组中的R的坐标值
+            pos = [(j * s_height - 1) * image.w + (i * s_width - 1)] * 4;
+            //判断R值是否符合要求
+            // console.log(data[pos])
+            if (data[pos + 3] >= 128) {
+              var color = `rgb(${data[pos]},${data[pos + 1]},${data[pos + 2]})`;
+              var particle = {
+                // 偏移，x,y值都随机一下
+                x0: 217.5,
+                y0: 600,
+                // x1: image.xOffset + i * s_width + (Math.random() - 0.5) * 20,
+                // y1: image.yOffset + j * s_height + (Math.random() - 0.5) * 20,
+                x1: image.xOffset + i * s_width,
+                y1: image.yOffset + j * s_height,
+                fillStyle: color,
+                curTime: 1,
+                duration: 300,
+                durationRamdon: 300 * Math.random(),
+                delay: 100
+              }
+              //符合要求的粒子保存到数组里
+              particles.push(particle);
+            }
+          }
+        }
+        console.log(particles.length)
+      }
+      //绘图案
+      function draw() {
+        //清空画布
+        canvas.ctx.clearRect(0, 0, canvas.w, canvas.h);
+        // canvas.ctx.clearRect(0, 0, 125, 125);
+        var len = particles.length,
+          cur_particle = null;
+        var cur_x, cur_y;
+        var cur_time = 0, duration = 0, cur_delay = 0, count = 0;
+        //把保存的粒子全部绘制到画布里
+        for (var i = 0; i < len; i++) {
+          //当前粒子
+          cur_particle = particles[i];
+          //如果单位时间超过了delay,开始
+          if (count++ > cur_particle.delay) {
+            //设置画布的填充色
+            canvas.ctx.fillStyle = cur_particle.fillStyle;
+            //获取当前的time和持续时间和延时
+            cur_time = cur_particle.curTime;
+            duration = cur_particle.durationRamdon;
+            cur_delay = cur_particle.delay;
+
+            // 如果最后一个粒子动画也执行完了则停止动画并return
+            if (particles[len - 1].duration < particles[len - 1].curTime) {
+              // 停止动画
+              console.log("end animtaion")
+              cancelAnimationFrame(requestId);
+              return;
+            } else if (cur_time < duration) {
+              //当前粒子正在运动
+              //计算出此刻x的坐标
+              cur_x = Math.easeInOutExpo(cur_time, cur_particle.x0, cur_particle.x1 - cur_particle.x0, duration);
+              cur_y = Math.easeInOutExpo(cur_time, cur_particle.y0, cur_particle.y1 - cur_particle.y0, duration);
+              //绘制到画布上
+              ctx.fillRect(cur_x, cur_y, 1, 1);
+              //当前时间++
+              cur_particle.curTime++;
+              // console.log(cur_x,cur_y)
+            } else {
+              //终点绘制在画布
+              ctx.fillRect(cur_particle.x1, cur_particle.y1, 1, 1);
+            }
+          } else {
+          }
+        }
+        requestId = requestAnimationFrame(draw)
+      }
+    }())
+  </script>
+</body>
+
+</html>
