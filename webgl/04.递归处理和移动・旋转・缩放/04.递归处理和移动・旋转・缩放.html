@@ -5,30 +5,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>01.简单三角形</title>
+  <title>04.递归处理和移动・旋转・缩放</title>
   <script src="../minMatrix.js" type="text/javascript"></script>
-  <!-- 
-    定点着色器 
-    一同声明了两个attribute变量，position和上次一样，没有变化，
-    、在它下面多了一个color，是为了处理顶点的颜色。
-    varying变量
-    varying变量是顶点着色器和片段着色器之间的桥梁。
-    看一下main函数中的代码就知道了，只需要将attribute变量中的顶点的
-    颜色直接赋值给varying变量。
-  -->
   <script id="vs" type="x-shader/x-vertex">
-    attribute vec3 position;
+    attribute vec3 position; //position变量定义成了vec3，说明是拥有3各元素的向量。
+    attribute vec4 color;
     uniform mat4 mvpMatrix;
+    varying vec4 vColor;
 
     void main(void){
+      vColor = color;
       gl_Position = mvpMatrix * vec4(position,1.0);
     }
   </script>
-  <!-- 片段着色器 -->
   <script id="fs" type="x-shader/x-fragment">
     precision mediump float;
+    varying vec4 vColor;
     void main(void){
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vColor;
     }
   </script>
 </head>
@@ -39,21 +33,11 @@
     onload = function () {
       // canvas对象获取
       var c = document.getElementById('canvas');
-      c.width = 300;
+      c.width = 500;
       c.height = 300;
 
       // webgl的context获取
       var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-
-      // 设定canvas初始化的颜色
-      // 小数0-1
-      gl.clearColor(0, 0.5, 0, 1.0);
-
-      // 设定canvas初始化时候的深度
-      gl.clearDepth(1);
-
-      // canvas的初始化
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       // 顶点着色器和片段着色器的生成
       var v_shader = create_shader('vs');
@@ -66,10 +50,13 @@
 
       // 从数组中获取attributeLocation
       var attLocation = new Array(2);
-      attLocation = gl.getAttribLocation(prg, 'position');
+      attLocation[0] = gl.getAttribLocation(prg, 'position');
+      attLocation[1] = gl.getAttribLocation(prg, 'color');
 
       // 将元素数attribute保存到数组中
-      var attStride = 3
+      var attStride = new Array(2);
+      attStride[0] = 3;
+      attStride[1] = 4;
 
       // 保存顶点的位置情报的数组
       var vertex_position = [
@@ -77,57 +64,94 @@
         1.0, 0.0, 0.0,
         -1.0, 0.0, 0.0
       ];
+
+      // 保存顶点的颜色情报的数组
+      var vertex_color = [
+        1.0, 0.0, 1.0, 1.0,
+        1.0, 1.0, 0.0, 1.0,
+        0.0, 1.0, 1.0, 1.0
+      ]
       // 生成VBO
-      var vbo = create_vbo(vertex_position);
-      //绑定VBO
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      var position_vbo = create_vbo(vertex_position);
+      var color_vbo = create_vbo(vertex_color);
+      
+      set_attribute([position_vbo,color_vbo], attLocation, attStride);
 
-      //设定attribute属性有効
-      gl.enableVertexAttribArray(attLocation);
+      var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
 
-      //添加attribute属性
-      gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
 
-      // 使用minMatrix.js对矩阵的相关处理
-      // matIV对象生成
       var m = new matIV();
 
       // 各种矩阵的生成和初始化
       var mMatrix = m.identity(m.create());
       var vMatrix = m.identity(m.create());
       var pMatrix = m.identity(m.create());
+      var tmpMatrix = m.identity(m.create());
       var mvpMatrix = m.identity(m.create());
 
-      // 视图变换坐标矩阵
-      // 第一个数组 开始向上移动1.0，向后移动3.0的地方
-      // 第二个数组 参考点 远点
-      // 第三个数组 ？
-      m.lookAt([0, 1, 3], [0, 0, 0], [0, 1, 0], vMatrix);
+      // 视图x投影坐标变换矩阵
+      m.lookAt([0, 0, 5], [0, 0, 0], [0, 1, 0], vMatrix);
+      m.perspective(45, c.width / c.height, 0.1, 100, pMatrix);
+      m.multiply(pMatrix, vMatrix, tmpMatrix);
 
-      // 投影坐标变换矩阵
-      m.perspective(90, c.width / c.height, 0.1, 100, pMatrix);
 
-      // 各矩阵相乘，得到最终的坐标变换矩阵
-      m.multiply(pMatrix, vMatrix, mvpMatrix);
-      m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+      // 声明计数器
+      var count = 0;
 
-      // uniformLocation的获取
-      var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
+      //持续循环
+      (function(){
+        // canvas初始化
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clearDepth(1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // 向uniformLocation中传入坐标变换矩阵
-      // 第一个参数是uniform变量的序号，
-      // 第二个参数是矩阵是否进行转置（true的话，有时候程序会崩溃），
-      // 第三个参数是实际的坐标变换矩阵
-      gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        // 计数器增加
+        count++;
 
-      // 绘制模型
-      //第一个参数是指定如何使用顶点进行绘图的一个常量，
-      //第二个参数是从第几个顶点开始使用，
-      //第三个参数是绘制几个顶点。
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+        //使用计数器算出角度
+        var rad = (count % 360) * Math.PI /180;
 
-      // context的刷新
-      gl.flush();
+        // 模型1按照一个圆形轨道进行旋转
+        var x = Math.cos(rad);
+        var y = Math.sin(rad);
+        m.identity(mMatrix);
+        m.translate(mMatrix, [x , y + 1.0, 0.0], mMatrix);
+
+        // 完成模型1的坐标变换矩阵，并进行绘图
+        m.multiply(tmpMatrix, mMatrix, mvpMatrix);
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+		    // 模型2沿Y轴进行旋转
+		    m.identity(mMatrix);
+		    m.translate(mMatrix, [1.0, -1.0, 0.0], mMatrix);
+		    m.rotate(mMatrix, rad, [0, 1, 0], mMatrix);
+		
+		    // 完成模型2的坐标变换矩阵，并进行绘图
+		    m.multiply(tmpMatrix, mMatrix, mvpMatrix);
+		    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+		    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        //模型3进行放大缩小
+        var s = Math.sin(rad) + 1.0;
+        m.identity(mMatrix);
+        m.translate(mMatrix, [-1.0, -1.0, 0.0], mMatrix);
+		    // m.rotate(mMatrix, rad, [0, 1, 0], mMatrix);
+        m.scale(mMatrix, [s, s, 0.0], mMatrix);
+
+        //完成模型3的坐标变换矩阵，并进行绘图
+        m.multiply(tmpMatrix, mMatrix, mvpMatrix);
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        // context的刷新
+        gl.flush();
+
+        //为了循环，进行递归处理
+        setTimeout(arguments.callee, 1000 / 30);
+      })();
+
+
 
       // 生成着色器的函数
       function create_shader(id) {
@@ -219,6 +243,16 @@
         return vbo;
       }
 
+      // 设置vbo属性
+      function set_attribute(vbo, attL, attS){
+        for(var i in vbo){
+          gl.bindBuffer(gl.ARRAY_BUFFER, vbo[i]);
+
+          gl.enableVertexAttribArray(attL[i]);
+
+          gl.vertexAttribPointer(attL[i], attS[i], gl.FLOAT, false, 0, 0);
+        }
+      }
     };
   </script>
   <canvas id="canvas" width="300" height="300"></canvas>

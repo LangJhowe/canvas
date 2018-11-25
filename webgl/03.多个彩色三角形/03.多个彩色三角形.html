@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>01.简单三角形</title>
+  <title>03.多个彩色三角形</title>
   <script src="../minMatrix.js" type="text/javascript"></script>
   <!-- 
     定点着色器 
@@ -17,18 +17,32 @@
     颜色直接赋值给varying变量。
   -->
   <script id="vs" type="x-shader/x-vertex">
-    attribute vec3 position;
+    attribute vec3 position; //position变量定义成了vec3，说明是拥有3各元素的向量。
+    attribute vec4 color;
     uniform mat4 mvpMatrix;
+    varying vec4 vColor;
 
     void main(void){
+      vColor = color;
       gl_Position = mvpMatrix * vec4(position,1.0);
     }
   </script>
-  <!-- 片段着色器 -->
+  <!-- 
+    片段着色器 
+    指定精确度的precision
+    这个precision是用来指定数值的精确度的关键字，紧接着跟在precision后面的是精确度修饰符。
+    这个修饰符有三种，简单点说就是指定精确度为上，中，下。其实，变量中使用的小数发生变化时（也就是说，处理的数值的位数增加或是减少），根据运行的环境不同得到的结果是不太统一的。
+    lowp   ：精确度低
+    mediump：精确度中
+    highp  ：精确度高
+    上面的片段着色器代码中，precision后面紧接着写的是mediump float，这是说，让片段着色器中的float类型的数值的精确度都按照mediump来用。
+    不管在片段着色器中有没有做什么特殊的处理，首先要将precision相关的设定写上，否则在编译着色器的时候会出错。这就像魔法的咒语一样，逃不掉的。
+  -->
   <script id="fs" type="x-shader/x-fragment">
     precision mediump float;
+    varying vec4 vColor;
     void main(void){
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vColor;
     }
   </script>
 </head>
@@ -66,10 +80,13 @@
 
       // 从数组中获取attributeLocation
       var attLocation = new Array(2);
-      attLocation = gl.getAttribLocation(prg, 'position');
+      attLocation[0] = gl.getAttribLocation(prg, 'position');
+      attLocation[1] = gl.getAttribLocation(prg, 'color');
 
       // 将元素数attribute保存到数组中
-      var attStride = 3
+      var attStride = new Array(2);
+      attStride[0] = 3;
+      attStride[1] = 4;
 
       // 保存顶点的位置情报的数组
       var vertex_position = [
@@ -77,39 +94,51 @@
         1.0, 0.0, 0.0,
         -1.0, 0.0, 0.0
       ];
+
+      // 保存顶点的颜色情报的数组
+      var vertex_color = [
+        1.0, 0.0, 1.0, 1.0,
+        1.0, 1.0, 0.0, 1.0,
+        0.0, 1.0, 1.0, 1.0
+      ]
       // 生成VBO
-      var vbo = create_vbo(vertex_position);
-      //绑定VBO
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      var position_vbo = create_vbo(vertex_position);
+      var color_vbo = create_vbo(vertex_color);
 
-      //设定attribute属性有効
-      gl.enableVertexAttribArray(attLocation);
+      // VBO绑定(位置情报)
+      gl.bindBuffer(gl.ARRAY_BUFFER, position_vbo);
+      gl.enableVertexAttribArray(attLocation[0]);
+      gl.vertexAttribPointer(attLocation[0], attStride[0], gl.FLOAT, false, 0, 0);
 
-      //添加attribute属性
-      gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
-
-      // 使用minMatrix.js对矩阵的相关处理
-      // matIV对象生成
+      // VBO绑定(颜色情报)
+      gl.bindBuffer(gl.ARRAY_BUFFER, color_vbo);
+      gl.enableVertexAttribArray(attLocation[1]);
+      gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
       var m = new matIV();
 
       // 各种矩阵的生成和初始化
       var mMatrix = m.identity(m.create());
       var vMatrix = m.identity(m.create());
       var pMatrix = m.identity(m.create());
+      var tmpMatrix = m.identity(m.create());
       var mvpMatrix = m.identity(m.create());
 
       // 视图变换坐标矩阵
       // 第一个数组 开始向上移动1.0，向后移动3.0的地方
       // 第二个数组 参考点 远点
-      // 第三个数组 ？
-      m.lookAt([0, 1, 3], [0, 0, 0], [0, 1, 0], vMatrix);
-
-      // 投影坐标变换矩阵
+      // 第三个数组 是将三维空间中的镜头放在了从原点开始向上移动1.0，向后移动3.0的地方，
+      // 原点是参考点，镜头的方向指向Y轴方向
+      // 视图x投影坐标变换矩阵
+      m.lookAt([0, 0, 3], [0, 0, 0], [0, 1, 0], vMatrix);
       m.perspective(90, c.width / c.height, 0.1, 100, pMatrix);
+      m.multiply(pMatrix, vMatrix, tmpMatrix);
 
-      // 各矩阵相乘，得到最终的坐标变换矩阵
-      m.multiply(pMatrix, vMatrix, mvpMatrix);
-      m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+      // 移动第一个模型的模型坐标变换举证
+      m.translate(mMatrix,[1.5, 0.0, 0.0],mMatrix)
+
+      // 模型x视图 x投影
+      m.multiply(tmpMatrix, mMatrix, mvpMatrix);
+      // m.multiply(mvpMatrix, mMatrix, mvpMatrix);
 
       // uniformLocation的获取
       var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
@@ -124,6 +153,18 @@
       //第一个参数是指定如何使用顶点进行绘图的一个常量，
       //第二个参数是从第几个顶点开始使用，
       //第三个参数是绘制几个顶点。
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      // 移动第二个模型的模型坐标变换矩阵
+      // 注意的是，对第二个模型准备模型坐标变换矩阵的时候，首先在最初的时候使用matIV.identity对矩阵进行初始化。如果，不进行初始化直接使用matIV.translate的话，会受前一回移动的影响，导致结果改变。进行完初始化之后再进行操作，是为了避免类似这样的错误发生。
+      m.identity(mMatrix);
+      m.translate(mMatrix, [-1.5, 0.0, 0.0], mMatrix)
+
+      //模型x视图x投影(第二个模型)
+      m.multiply(tmpMatrix, mMatrix, mvpMatrix);
+
+      //将坐标变换矩阵传入uniformLocation ， 并绘图(第二个模型)
+      gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       // context的刷新
