@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>01.hello_color</title>
+  <!-- <script type="text/javascript" src="../dist/GlslCanvas.min.js"></script> -->
+
+  <script id="vertexShader" type="x-shader/x-vertex"></script>
+  <script id="fragmentShader" type="x-shader/x-fragment"></script>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    window.onload = function () {
+      var canvas = document.getElementById('canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      console.log(gl)
+      var vFile = './glsl/vs.glsl';
+      var fFile = './glsl/fs.glsl';
+
+      // gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      // gl.clearDepth(1.0);
+      // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      var attStride = new Array();
+      attStride[0] = gl.getAttribLocation(); 
+
+      initShader(gl, vFile, fFile, function (vs, fs) {
+        gl.drawArrays(gl.POINTS, 0, 1);
+      })
+    }
+
+    //初始化vs，fs shader
+    function initShader(gl, vsFile, fsFile, cb) {
+      var vs = null;
+      var fs = null;
+
+      var onShaderLoaded = function () {
+        if (vs && fs) {
+          var v_shader = create_shader(gl, 'v', vs);
+          var f_shader = create_shader(gl, 'f', fs);
+          var prg = create_program(gl, v_shader, f_shader)
+          cb(prg)
+        }
+      }
+
+      loadShaderFromFile(vsFile, function (vsContent) {
+        vs = vsContent
+        onShaderLoaded()
+      })
+
+      loadShaderFromFile(fsFile, function (fsContent) {
+        fs = fsContent
+        onShaderLoaded()
+      })
+    }
+
+
+    // create shader
+    function create_shader(gl, type, text) {
+      var shader
+      if (type === 'v') {
+        shader = gl.createShader(gl.VERTEX_SHADER);
+
+      } else if (type === 'f') {
+        shader = gl.createShader(gl.FRAGMENT_SHADER);
+      }
+      gl.shaderSource(shader, text);
+      gl.compileShader(shader);
+
+      // 判断一下着色器是否编译成功
+      if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.log(text)
+        // 编译成功，则返回着色器
+        return shader;
+      } else {
+        // 编译失败，弹出错误消息
+        alert(gl.getShaderInfoLog(shader));
+      }
+    }
+
+    // 程序对象的生成和着色器连接的函数
+    function create_program(gl, vs, fs) {
+      console.log(vs)
+      // 程序对象的生成
+      var program = gl.createProgram();
+
+      // 向程序对象里分配着色器
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+
+      // 将着色器连接
+      gl.linkProgram(program);
+
+      // 判断着色器的连接是否成功
+      if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+        // 成功的话，将程序对象设置为有效
+        gl.useProgram(program);
+
+        // 返回程序对象
+        return program;
+      } else {
+
+        // 如果失败，弹出错误信息
+        console.log('p')
+        alert(gl.getProgramInfoLog(program));
+      }
+    }
+
+    function loadShaderFromFile(filename, onLoadShader) {
+      var request = new XMLHttpRequest();
+      request.onreadystatechange = function () {
+        if (request.readyState === 4 && request.status === 200) {
+          onLoadShader(request.responseText);
+        }
+      }
+      request.open("GET", filename, true);
+      request.send();
+    }
+  </script>
+</body>
+
+</html>

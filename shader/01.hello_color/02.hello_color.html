@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>01.hello_color</title>
+  <!-- <script type="text/javascript" src="../dist/GlslCanvas.min.js"></script> -->
+  <script src="../js/minMatrix.js" type="text/javascript"></script>
+  <script id="vertexShader" type="x-shader/x-vertex"></script>
+  <script id="fragmentShader" type="x-shader/x-fragment"></script>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    // https://blog.csdn.net/lufy_legend/article/list/2
+    onload = function () {
+      // canvas对象获取
+      var c = document.getElementById('canvas');
+      c.width = 500;
+      c.height = 300;
+
+      // webgl的context获取
+      var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+
+      var vFile = './glsl/vs.glsl';
+      var fFile = './glsl/fs.glsl';
+      initShader(gl, vFile, fFile, function (prg) {
+        // 从数组中获取attributeLocation
+        var attLocation = new Array(2);
+        attLocation = gl.getAttribLocation(prg, 'position');
+
+        var attStride = 3
+        // var vertex_position = [
+        //   0.0, 1.0, 0.0,
+        //   1.0, 0.0, 0.0,
+        //   -1.0, 0.0, 0.0
+        // ];
+        var vertex_position = []
+        for (var i = 0; i < c.height - 1; i++) {
+          for (var j = 0; j < c.width - 1; j++) {
+            vertex_position.push(i * c.width + j, i, 0)
+          }
+        }
+        console.log(vertex_position)
+        var position_vbo = create_vbo(vertex_position);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, position_vbo);
+        gl.enableVertexAttribArray(attLocation);
+        gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
+        // canvas初始化
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clearDepth(1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        var m = new matIV();
+
+        // 各种矩阵的生成和初始化
+        var mMatrix = m.identity(m.create());
+        var vMatrix = m.identity(m.create());
+        var pMatrix = m.identity(m.create());
+        var mvpMatrix = m.identity(m.create());
+
+        // 视图变换坐标矩阵
+        // 第一个数组 开始向上移动1.0，向后移动3.0的地方
+        // 第二个数组 参考点 远点
+        // 第三个数组 ？
+        m.lookAt([0, 1, 30], [0, 0, 0], [0, 1, 0], vMatrix);
+
+        // 投影坐标变换矩阵
+        m.perspective(90, c.width / c.height, 0.1, 100, pMatrix);
+
+        // 各矩阵相乘，得到最终的坐标变换矩阵
+        m.multiply(pMatrix, vMatrix, mvpMatrix);
+        m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+
+        // uniformLocation的获取
+        var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
+
+        // 向uniformLocation中传入坐标变换矩阵
+        // 第一个参数是uniform变量的序号，
+        // 第二个参数是矩阵是否进行转置（true的话，有时候程序会崩溃），
+        // 第三个参数是实际的坐标变换矩阵
+        gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        gl.drawArrays(gl.POINTS, 0, 1000);
+        // gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+
+        // context的刷新
+        gl.flush();
+        // //持续循环
+        // (function () {
+        //   // canvas初始化
+        //   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        //   gl.clearDepth(1.0);
+        //   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        //   var m = new matIV();
+
+        //   // 各种矩阵的生成和初始化
+        //   var mMatrix = m.identity(m.create());
+        //   var vMatrix = m.identity(m.create());
+        //   var pMatrix = m.identity(m.create());
+        //   var mvpMatrix = m.identity(m.create());
+
+        //   // 视图变换坐标矩阵
+        //   // 第一个数组 开始向上移动1.0，向后移动3.0的地方
+        //   // 第二个数组 参考点 远点
+        //   // 第三个数组 ？
+        //   m.lookAt([0, 1, 3], [0, 0, 0], [0, 1, 0], vMatrix);
+
+        //   // 投影坐标变换矩阵
+        //   m.perspective(90, c.width / c.height, 0.1, 100, pMatrix);
+
+        //   // 各矩阵相乘，得到最终的坐标变换矩阵
+        //   m.multiply(pMatrix, vMatrix, mvpMatrix);
+        //   m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+
+        //   // uniformLocation的获取
+        //   var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
+
+        //   // 向uniformLocation中传入坐标变换矩阵
+        //   // 第一个参数是uniform变量的序号，
+        //   // 第二个参数是矩阵是否进行转置（true的话，有时候程序会崩溃），
+        //   // 第三个参数是实际的坐标变换矩阵
+        //   gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+        //   gl.drawArrays(gl.TRIANGLES, 0, 3);
+        //   // gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+
+        //   // context的刷新
+        //   gl.flush();
+        //   //为了循环，进行递归处理
+        //   setTimeout(arguments.callee, 1000 / 30);
+        // })();
+      })
+
+      // 生成着色器的函数
+      function create_shader(id) {
+        // 用来保存着色器的变量
+        var shader;
+
+        // 根据id从HTML中获取指定的script标签
+        var scriptElement = document.getElementById(id);
+
+        // 如果指定的script标签不存在，则返回
+        if (!scriptElement) { return; }
+
+        // 判断script标签的type属性
+        switch (scriptElement.type) {
+
+          // 顶点着色器的时候
+          case 'x-shader/x-vertex':
+            shader = gl.createShader(gl.VERTEX_SHADER);
+            break;
+
+          // 片段着色器的时候
+          case 'x-shader/x-fragment':
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+            break;
+          default:
+            return;
+        }
+
+        // 将标签中的代码分配给生成的着色器
+        gl.shaderSource(shader, scriptElement.text);
+
+        // 编译着色器
+        gl.compileShader(shader);
+
+        // 判断一下着色器是否编译成功
+        if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+
+          // 编译成功，则返回着色器
+          return shader;
+        } else {
+
+          // 编译失败，弹出错误消息
+          alert(gl.getShaderInfoLog(shader));
+        }
+      }
+
+      // 程序对象的生成和着色器连接的函数
+      function create_program(vs, fs) {
+        console.log(vs)
+        // 程序对象的生成
+        var program = gl.createProgram();
+
+        // 向程序对象里分配着色器
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+
+        // 将着色器连接
+        gl.linkProgram(program);
+
+        // 判断着色器的连接是否成功
+        if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+          // 成功的话，将程序对象设置为有效
+          gl.useProgram(program);
+
+          // 返回程序对象
+          return program;
+        } else {
+
+          // 如果失败，弹出错误信息
+          alert(gl.getProgramInfoLog(program));
+        }
+      }
+
+      // 生成VBO的函数
+      function create_vbo(data) {
+        // 生成缓存对象
+        var vbo = gl.createBuffer();
+
+        // 绑定缓存
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+
+        // 向缓存中写入数据
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+
+        // 将绑定的缓存设为无效
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // 返回生成的VBO
+        return vbo;
+      }
+      // IBO的生成函数
+      function create_ibo(data) {
+        // 生成缓存对象
+        var ibo = gl.createBuffer();
+
+        // 绑定缓存
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+
+        // 向缓存中写入数据
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
+
+        // 将缓存的绑定无效化
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        // 返回生成的IBO
+        return ibo;
+      }
+      // 设置vbo属性
+      function set_attribute(vbo, attL, attS) {
+        for (var i in vbo) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, vbo[i]);
+
+          gl.enableVertexAttribArray(attL[i]);
+
+          gl.vertexAttribPointer(attL[i], attS[i], gl.FLOAT, false, 0, 0);
+        }
+      }
+
+      function torus(row, column, irad, orad) {
+        var pos = new Array(), nor = new Array(),
+          col = new Array(), idx = new Array();
+        for (var i = 0; i <= row; i++) {
+          var r = Math.PI * 2 / row * i;
+          var rr = Math.cos(r);
+          var ry = Math.sin(r);
+          for (var ii = 0; ii <= column; ii++) {
+            var tr = Math.PI * 2 / column * ii;
+            var tx = (rr * irad + orad) * Math.cos(tr);
+            var ty = ry * irad;
+            var tz = (rr * irad + orad) * Math.sin(tr);
+            var rx = rr * Math.cos(tr);
+            var rz = rr * Math.sin(tr)
+            pos.push(tx, ty, tz);
+            nor.push(rx, ry, rz)
+            var tc = hsva(360 / column * ii, 1, 1, 1);
+            col.push(tc[0], tc[1], tc[2], tc[3]);
+          }
+        }
+        for (i = 0; i < row; i++) {
+          for (ii = 0; ii < column; ii++) {
+            r = (column + 1) * i + ii;
+            idx.push(r, r + column + 1, r + 1);
+            idx.push(r + column + 1, r + column + 2, r + 1);
+          }
+        }
+        return [pos, nor, col, idx];
+      }
+
+      // [ 色调 = Hue ]・[ 饱和度 = Saturation ]・[ 亮度 = Value ] [透明度 = alpha]
+      function hsva(h, s, v, a) {
+        if (s > 1 || v > 1 || a > 1) { return; }
+        var th = h % 360; // 取余
+        var i = Math.floor(th / 60); //360分层6段，0,1,2,3,4,5
+        var f = th / 60 - i;  //差值
+        var m = v * (1 - s);
+        var n = v * (1 - s * f);
+        var k = v * (1 - s * (1 - f));
+        var color = new Array();
+        if (s == 0) {
+          color.push(v, v, v, a);
+        } else {
+          // v * (1 - s * (1 - f))
+          // s!=1,f=0 v=v * (1 - s)=v
+          // s!=1,f=0 v=v * (1 - s * f)=v
+          // s!=1,f=0 v=v * (1 - s * (1 - f))=v
+          var r = new Array(v, n, m, m, k, v);
+          var g = new Array(k, v, v, n, m, m);
+          var b = new Array(m, m, k, v, v, n);
+          color.push(r[i], g[i], b[i], a);
+        }
+        return color;
+      }
+    };
+    //初始化vs，fs shader
+    function initShader(gl, vsFile, fsFile, cb) {
+      var vs = null;
+      var fs = null;
+
+      var onShaderLoaded = function () {
+        if (vs && fs) {
+          var v_shader = create_shader(gl, 'v', vs);
+          var f_shader = create_shader(gl, 'f', fs);
+          var prg = create_program(gl, v_shader, f_shader)
+          cb(prg)
+        }
+      }
+
+      loadShaderFromFile(vsFile, function (vsContent) {
+        vs = vsContent
+        onShaderLoaded()
+      })
+
+      loadShaderFromFile(fsFile, function (fsContent) {
+        fs = fsContent
+        onShaderLoaded()
+      })
+    }
+    // create shader
+    function create_shader(gl, type, text) {
+      var shader
+      if (type === 'v') {
+        shader = gl.createShader(gl.VERTEX_SHADER);
+
+      } else if (type === 'f') {
+        shader = gl.createShader(gl.FRAGMENT_SHADER);
+      }
+      gl.shaderSource(shader, text);
+      gl.compileShader(shader);
+
+      // 判断一下着色器是否编译成功
+      if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.log(text)
+        // 编译成功，则返回着色器
+        return shader;
+      } else {
+        // 编译失败，弹出错误消息
+        alert(gl.getShaderInfoLog(shader));
+      }
+    }
+    // 程序对象的生成和着色器连接的函数
+    function create_program(gl, vs, fs) {
+      console.log(vs, fs)
+      // 程序对象的生成
+      var program = gl.createProgram();
+
+      // 向程序对象里分配着色器
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+
+      // 将着色器连接
+      gl.linkProgram(program);
+
+      // 判断着色器的连接是否成功
+      if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+        // 成功的话，将程序对象设置为有效
+        gl.useProgram(program);
+
+        // 返回程序对象
+        return program;
+      } else {
+
+        // 如果失败，弹出错误信息
+        alert(gl.getProgramInfoLog(program));
+      }
+    }
+    function loadShaderFromFile(filename, onLoadShader) {
+      var request = new XMLHttpRequest();
+      request.onreadystatechange = function () {
+        if (request.readyState === 4 && request.status === 200) {
+          onLoadShader(request.responseText);
+        }
+      }
+      request.open("GET", filename, true);
+      request.send();
+    }
+  </script>
+  <canvas id="canvas" width="500" height="300"></canvas>
+</body>
+
+</html>
