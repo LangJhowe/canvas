@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Study01</title>
+</head>
+
+<body>
+  <script id="vertex_shader" type="x-shader/x-vertex">
+    attribute vec4 a_Position;
+    attribute vec4 a_Color;
+    varying vec4 v_Color;
+    void main() {
+      gl_Position = a_Position;
+      gl_PointSize = 10.0;
+      v_Color = a_Color;
+    }
+    </script>
+  <script id="fragment_shader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec4 v_Color;
+    void main() {
+      gl_FragColor = v_Color;
+    }
+  </script>
+  <canvas id="canvas" width="600" height="600">你的浏览器不支持canvas</canvas>
+  <script>
+    main();
+
+    function main() {
+      // 一、获取webgl上下文
+      const gl = getWebGl('canvas') // 通过id获取gl
+
+
+      // 二、初始化着色器
+      const vertex_resource = document.getElementById('vertex_shader').innerText;
+      const fragment_resource = document.getElementById('fragment_shader').innerText;
+      initShaders(gl, vertex_resource, fragment_resource);
+
+      // 三、初始化缓冲
+      const n = initBuffers(gl);
+
+      // var width = canvas.width;
+      // var height = canvas.height;
+      // //1. Init Color Texture
+      // var texture = gl.createTexture();
+      // gl.bindTexture(gl.TEXTURE_2D, texture);
+      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA,
+      //   gl.UNSIGNED_BYTE, null);
+      // //2. Init Render Buffer
+      // var renderbuffer = gl.createRenderbuffer();
+      // gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+      // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width,
+      //   height);
+      // //3. Init Frame Buffer
+      // var framebuffer = gl.createFramebuffer();
+      // gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+      //   gl.TEXTURE_2D, texture, 0);
+      // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+        // gl.RENDERBUFFER, renderbuffer);
+
+      // 四、清除背景色和颜色缓存
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // 五、绘制
+      // gl.drawArrays(gl.POINTS, 0, n);/*1.点绘制*/
+      // gl.drawArrays(gl.TRIANGLES, 0, n);/*2.三角绘制*/
+      gl.drawArrays(gl.LINE_LOOP, 0, n);/*3.线绘制*/
+    }
+    function getWebGl(id) {
+      let gl = null;
+      const canvas = document.getElementById(id)
+      console.log(id)
+      if (canvas == null) {
+        alert("没有id为" + id + '的元素')
+        return;
+      }
+      const name = ['webgl', 'experimental-webgl', 'webkit-3d', 'moz-webgl'];
+      for (var i in name) {
+        try {
+          gl = canvas.getContext(name[i]);
+        } catch (e) { }
+        if (gl) break;
+      }
+      if (gl == null) {
+        alert("不能通过getContext获取webgl")
+      } else {
+        return gl
+      }
+    }
+    function initShaders(gl, vResource, fResource) {
+      //1.分别加载定点着色器和片段着色器
+      const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vResource);
+      const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fResource);
+      //2.创建程序对象
+      const program = gl.createProgram();
+      //3.编译过的着色器附加到程序对象中
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      //4.连接程序对象
+      gl.linkProgram(program);
+      //5.调用程序对象
+      gl.useProgram(program);
+      gl.program = program;
+    }
+    function loadShader(gl, type, source) {
+      //1.创建着色器对象
+      const shader = gl.createShader(type);
+      //2.把着色器代码加载到着色器对象
+      gl.shaderSource(shader, source);
+      //3.编译着色器
+      gl.compileShader(shader);
+      //getShaderParameter 检查编译状态
+      const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      if (!compiled) {
+        const error = gl.getShaderInfoLog(shader);
+        alert("编译着色器失败：" + error);
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+    function initBuffers(gl) {
+      // 定义定点数据 x,y,r,g,b
+      const vertices = new Float32Array([
+        0.0, 0.5, 1.0, 0.0, 0.0,
+        -0.5, -0.5, 0.0, 1.0, 0.0,
+        0.5, -0.5, 0.0, 0.0, 1.0
+      ])
+      const n = 3;
+
+      // 创建buffer对象
+      const vertexBuffer = gl.createBuffer();
+      //创建buffer对象,BYTES_PER_ELEMENT表示了特定强类型数组中每个元素所占用的字节数
+      const FSIZE = vertices.BYTES_PER_ELEMENT;
+      console.log(FSIZE, 'FSIZE')
+      //绑定buffer到缓冲对象上
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+      //想缓冲对象写入数据
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      //从程序兑现中获取相应的属性
+      const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+      const a_Color = gl.getAttribLocation(gl.program, 'a_Color');
+
+      //向顶点写入缓冲数据
+      gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 5, 0);
+
+      // 使用缓冲数据建立程序代码到着色器代码的联系
+      gl.enableVertexAttribArray(a_Position);
+
+      gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 5, FSIZE * 2);
+      gl.enableVertexAttribArray(a_Color);
+      return n;
+    }
+  </script>
+</body>
+
+</html>

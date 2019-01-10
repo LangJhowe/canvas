@@ -83,3 +83,8 @@ function loadShaderFromFile(filename, onLoadShader) {
   request.open("GET", filename, true);
   request.send();
 }
+
+function createProgram(gl, vs, fs){
+  var prg = gl.createProgram()
+  
+}
