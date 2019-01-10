@@ -11,7 +11,7 @@
 <body>
   <canvas id="canvas" width="400" height="400">Please use the browser supporting "canvas"</canvas>
 
-  <script src="../lib/webgl-utils.js"></script>
+  <script src="../../lib/webgl-utils.js"></script>
 
   <script>
     var VSHADER_SOURCE =
@@ -68,7 +68,8 @@
           var xy = g_points[i]
           var rgba = g_colors[i]
           gl.vertexAttrib3f(a_Position, xy[0], xy[1], 0.0);
-          gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
+          // gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
+          gl.uniform4fv(u_FragColor, new Float32Array([rgba[0], rgba[1], rgba[2], rgba[3]]));
           gl.drawArrays(gl.POINTS, 0, 1);
         }
       }
