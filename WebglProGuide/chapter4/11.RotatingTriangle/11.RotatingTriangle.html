@@ -22,6 +22,8 @@
       "void main () {\n" + 
       " gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n" + 
       "}\n"; 
+
+  var ANGLE_STEP = 45.0;  
   main();
 
   function main(){
@@ -37,27 +39,14 @@
     var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     var u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix')    
 
-    var ANGLE_STEP = 45.0;
     var currentAngle = 0.0;
-
     var modelMatrix = new Matrix4();
-
     var tick = function(){
       currentAngle = animate(currentAngle);// 更新旋转角
       draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix);
-      requestAnimationFrame(animate)
+      requestAnimationFrame(tick)
     }
-    var tx = 0.5;
-    // modelMatrix.setRotate(ANGLE, 0, 0, 1);
-    // modelMatrix.translate(tx, 0, 0, 1);
-
-    // modelMatrix.setTranslate(tx, 0, 0, 1);
-    modelMatrix.translate(tx, 0, 0, 1);
-    modelMatrix.rotate(ANGLE, 0, 0, 1);
-
-
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-    gl.drawArrays(gl.TRIANGLES, 0, n);
+    tick();
   }
   function initVertexBuffer(gl){
       var vertices = new Float32Array([
@@ -81,7 +70,32 @@
       gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
       gl.enableVertexAttribArray(a_Position); 
       return n;
-    }
+  }
+  function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
+    //设置旋转矩阵
+    modelMatrix.setRotate(currentAngle, 0, 0, 1);
+
+    //清除<canvas>
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    //将旋转矩阵传输给顶点着色器
+    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+
+    //绘制三角形
+    gl.drawArrays(gl.TRIANGLES, 0, n)
+  }
+
+  //记录上一次调用函数的时刻
+  var g_last = Date.now();
+  function animate(angle) {
+    //计算距离上一次调用经过多长的时间
+    var now = Date.now();
+    var elapsed = (now - g_last) || 0;
+    g_last = now;
+    //根据距离上次调用的时间,更新当前旋转角度
+    var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
+    return newAngle%=360;
+  }
   </script>
 </body>
 </html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>14.TexturedQuad</title>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script src="../../lib/webgl-utils.js"></script>
+  <script>
+    var VERTEX_RESOURCE =
+      'attribute vec4 a_Position;\n' +
+      'attribute vec2 a_TexCoord;\n' +
+      'varying vec2 v_TexCoord;\n' +
+      'void main() {\n' +
+      ' gl_Position = a_Position;\n' +
+      ' v_TexCoord = a_TexCoord;\n' +
+      '}\n'
+    var FRAGMENT_RESOURCE =
+      'precision mediump float;\n' +
+      'uniform sampler2D u_Sampler;\n' + 
+      'varying vec2 v_TexCoord;\n' +
+      'void main () {\n' +
+      ' gl_FragColor = texture2D(u_Sampler, v_TexCoord);\n' +
+      '}'
+    main();
+
+    function main() {
+      const canvas = document.getElementById('canvas');
+      const gl = getWebGLContext(canvas);
+
+      initShaders(gl, VERTEX_RESOURCE, FRAGMENT_RESOURCE);
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      var n = initVertexBuffer(gl);
+
+      if(!initTextures(gl, n)){
+        alert("initTextures error")
+      }
+
+      function initVertexBuffer(gl) {
+        var verticesTexCoords = new Float32Array([
+          // 顶点坐标,  纹理坐标
+          -0.5,  0.5, -0.3,  1.7,
+          -0.5, -0.5, -0.3, -0.2,
+           0.5,  0.5,  1.7,  1.7,
+           0.5, -0.5,  1.7, -0.2
+        ])
+        var n = 4;
+
+        var vertexTexCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexTexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, verticesTexCoords, gl.STATIC_DRAW);
+
+        var FSIZE = verticesTexCoords.BYTES_PER_ELEMENT;
+        
+        var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE*4, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        var a_TexCoord = gl.getAttribLocation(gl.program, 'a_TexCoord');
+        gl.vertexAttribPointer(a_TexCoord, 2, gl.FLOAT, false, FSIZE*4, FSIZE*2 );
+        gl.enableVertexAttribArray(a_TexCoord);
+
+        return n;
+      }
+
+      function initTextures(gl, n) {
+        var texture = gl.createTexture();//创建纹理
+
+        // 获取u_Sampler 的存储位置
+        var u_Sampler = gl.getUniformLocation(gl.program, 'u_Sampler');
+
+        var image = new Image(); // 创建一个image对象
+
+        //注册图像加载时间的响应函数
+        image.onload = function() {
+          loadTexture(gl, n, texture, u_Sampler, image);
+        }
+        image.src = '../../resource/gltexture.jpg';
+        //注意：这样图片的尺寸一定是2^mx2^n尺寸的图片，不然会报错 WebGL: drawArrays: texture bound to texture unit 0 is not renderable.
+        return true
+      }
+
+
+      function loadTexture(gl, n, texture, u_Sampler, image) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); //对纹理图像进行y轴反转
+        //开启0号纹理单元
+        gl.activeTexture(gl.TEXTURE0);
+        //向target绑定文理对象
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        //配置纹理参数
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+        //配置纹理图像
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+        //将0号纹理传给着色器
+        gl.uniform1i(u_Sampler, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
+      }
+    }
+  </script>
+</body>
+</html>

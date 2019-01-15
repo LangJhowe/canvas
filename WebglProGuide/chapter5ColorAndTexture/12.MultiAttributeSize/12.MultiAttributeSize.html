@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>12.MultiAttributeSize</title>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script src="../../lib/webgl-utils.js"></script>
+  <script>
+    var VERTEX_RESOURCE = 
+      'attribute vec4 a_Position;\n' + 
+      'attribute float a_PointSize;\n' + 
+      'void main () {\n' + 
+      ' gl_Position = a_Position;\n' +
+      ' gl_PointSize = a_PointSize;\n' +
+      '}'
+    var FRAGMENT_RESOURCE =
+      'void main() {\n' +
+      ' gl_FragColor = vec4(1.0, 0, 0, 1.0);\n' +
+      '}'
+
+    main();
+
+    function main(){
+      const canvas = document.getElementById('canvas');
+      const gl = getWebGLContext(canvas);
+
+      initShaders(gl, VERTEX_RESOURCE, FRAGMENT_RESOURCE);
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      var n = initVertexBuffer(gl);
+
+      gl.drawArrays(gl.POINTS, 0, n);
+
+      function initVertexBuffer(gl) {
+        var vertices = new Float32Array([
+           0.0,  0.5,
+          -0.5, -0.5,
+           0.5, -0.5
+        ]);
+        var sizes = new Float32Array([10.0, 20.0, 30.0]);
+        var n = 3;
+        var vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+        var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        //将顶点尺寸写入缓冲去对象并开启
+        var sizeBuffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
+        var a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+
+        gl.vertexAttribPointer(a_PointSize, 1, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_PointSize);
+        return n;
+      }
+    }
+
+  </script>
+</body>
+</html>
