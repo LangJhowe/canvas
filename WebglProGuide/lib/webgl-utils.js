@@ -73,3 +73,17 @@ function loadShader(gl,type,source) {
   }
   return shader;
 }
+
+function consoleVertices(array, len) {
+  if(array.length%len != 0) console.log(new Error('array长度 不能整除' + len))
+  let particlesArray = []
+  for(var i = 0;i<array.length;i+=len){
+    let particleInfo = []
+    for(var j = 0; j<len;j++){
+      particleInfo.push(array[i+j])
+    }
+    particlesArray.push(particleInfo);
+  }
+  console.log(particlesArray)
+
+}
